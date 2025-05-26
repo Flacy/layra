@@ -1,0 +1,25 @@
+name: "testing-pytest"
+version: "0.0.1"
+description: "Testing setup with pytest"
+author: "Layra"
+
+dependencies:
+  packages:
+    - "pytest>=7.0.0"
+    - "pytest-cov>=4.0.0"
+
+conflicts:
+  - "testing-unittest"
+
+files:
+  - src: "tests"
+    dest: "tests"
+
+pyproject_additions:
+  tool.pytest.ini_options:
+    testpaths: ["tests"]
+    python_files: ["test_*.py"]
+    addopts: "--cov=src --cov-report=html"
+
+default_variables:
+  test_framework: "pytest"

@@ -1,0 +1,14 @@
+name: "web-api"
+version: "0.0.1"
+description: "FastAPI web service"
+author: "Layra"
+base: "base"
+
+components:
+  - name: "testing-pytest"
+    default: true
+
+default_variables:
+  python_version: "3.12"
+  framework: "fastapi"
+  project_description: "A FastAPI web service"
