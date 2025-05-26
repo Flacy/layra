@@ -72,7 +72,6 @@ class TemplateManager:
         :return:
         """
         component_path = self._components_dir / name
-        print(name, component_path)
         config_path = component_path / "component.yaml"
 
         if not config_path.exists():
