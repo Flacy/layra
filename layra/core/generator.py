@@ -2,7 +2,6 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-import rtoml
 import tomli_w
 
 from layra import __version__
