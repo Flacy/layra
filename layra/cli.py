@@ -2,10 +2,12 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.table import Table
 from typer import Typer, Argument, Option
 
 from layra import __version__
 from layra.core.generator import ProjectGenerator
+from layra.core.templates import TemplateManager
 
 app = Typer(
     name="layra",
@@ -44,6 +46,24 @@ def new(
 
     console.print("Project created successfully at [bold green]{}[/bold green]".format(project_path))
 
+
+@app.command()
+def profiles() -> None:
+    """
+    List available profiles.
+    """
+    template_manager = TemplateManager()
+    available_profiles = template_manager.list_profiles()
+
+    table = Table(title="Available profiles")
+    table.add_column("Name", style="cyan")
+    table.add_column("Description", style="green")
+    table.add_column("Version", style="yellow")
+
+    for profile in available_profiles:
+        table.add_row(profile.name, profile.description, profile.version)
+
+    console.print(table)
 
 @app.command()
 def version() -> None:
