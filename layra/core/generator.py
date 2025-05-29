@@ -15,6 +15,7 @@ from layra.models.profile import Profile
 DEFAULT_PYTHON_VERSION: str = "{}.{}".format(version_info.major, version_info.minor)
 DEFAULT_PROJECT_DESCRIPTION: str = "A python project generated with Layra"
 DEFAULT_PROJECT_VERSION: str = "0.0.1"
+PROFILE_FILE: str = "profile.yaml"
 
 
 def _copy_component_files(
@@ -89,12 +90,36 @@ class ProjectGenerator:
 
     def _copy_base_template(self) -> None:
         _copy_template_files(
-            self._template_manager.base_template_path,
+            self._template_manager.path_to_base_template,
             self._output_directory,
             variables=self._variables,
         )
 
+    def _copy_profile(self) -> None:
+        profile_path = self._template_manager.profile_path(self._selected_profile)
+        profile_path.mkdir(parents=True, exist_ok=True)
+
+        for item in profile_path.rglob("*"):  # type: Path
+            if item.name == PROFILE_FILE:
+                continue
+
+            relative_path = item.relative_to(profile_path)
+            dest_file = self._output_directory / self.package_name / relative_path
+
+            if item.is_dir():
+                dest_file.mkdir(parents=True, exist_ok=True)
+            elif item.is_file():
+                dest_file.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    dest_file.write_text(item.read_text(encoding="utf-8"), encoding="utf-8")
+                except UnicodeDecodeError:
+                    shutil.copy2(item, dest_file)
+
     def _prepare_variables(self) -> None:
+        for key, value in self._selected_profile.default_variables.items():
+            if key not in self._variables:
+                self._variables[key] = value
+
         for component in self._components:
             for key, value in component.default_variables.items():
                 if key not in self._variables:
@@ -111,7 +136,7 @@ class ProjectGenerator:
                 ],
                 "readme": "README.md",
                 "requires-python": ">={}".format(self._variables.get("python_version", DEFAULT_PYTHON_VERSION)),
-                "dependencies": [],
+                "dependencies": self._selected_profile.dependencies,
             }
         }
 
@@ -142,14 +167,15 @@ class ProjectGenerator:
             self._output_directory.mkdir(parents=True, exist_ok=True)
             self._prepare_variables()
             self._copy_base_template()
+            self._copy_profile()
+            self._generate_pyproject()
 
             for component in self._components:
                 _copy_component_files(component, self._output_directory, self._variables)
 
-            (source_dir := self._output_directory / self.package_name).mkdir()
+            (source_dir := self._output_directory / self.package_name).mkdir(exist_ok=True)
             (source_dir / "__init__.py").touch(0o777)
 
-            self._generate_pyproject()
             return self._output_directory
         except Exception as e:
             if self._output_directory.exists():

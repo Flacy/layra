@@ -8,8 +8,7 @@ class Profile:
     description: str
     author: str | None = None
 
-    # Base template.
-    base: str = "base"
+    dependencies: list[str] = None
 
     # Variables by default
     default_variables: dict[str, str] = None
@@ -17,6 +16,8 @@ class Profile:
     prompts: list[dict[str, str]] = None
 
     def __post_init__(self) -> None:
+        if self.dependencies is None:
+            self.dependencies = []
         if self.default_variables is None:
             self.default_variables = {}
         if self.prompts is None:

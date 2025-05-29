@@ -1,4 +1,5 @@
 from pathlib import Path
+from tkinter.font import names
 
 import yaml
 
@@ -24,8 +25,12 @@ class TemplateManager:
         self._base_dir = self._templates_dir / "base"
 
     @property
-    def base_template_path(self) -> Path:
+    def path_to_base_template(self) -> Path:
         return self._base_dir
+
+    def profile_path(self, profile: str | Profile) -> Path:
+        profile_name = profile.name if isinstance(profile, Profile) else profile
+        return self._profiles_dir / profile_name
 
     def load_profile(self, name: str) -> Profile:
         """
@@ -34,10 +39,10 @@ class TemplateManager:
         :param name:
         :return:
         """
-        path = self._profiles_dir / "{}.yaml".format(name)
+        path = self._profiles_dir / name / "profile.yaml"
 
         if not path.exists():
-            available = [p.stem for p in self._profiles_dir.glob("*.yaml")]
+            available = [p.stem for p in self._profiles_dir.glob("*")]
             raise TemplateError("Profile '{}' not found. Available: {}".format(name, ", ".join(available)))
 
         try:
@@ -49,7 +54,7 @@ class TemplateManager:
                 version=data["version"],
                 description=data["description"],
                 author=data.get("author"),
-                base=data.get("base", "base"),
+                dependencies=data.get("dependencies", []),
                 default_variables=data.get("default_variables", {}),
                 prompts=data.get("prompts", []),
             )
