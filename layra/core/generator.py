@@ -83,6 +83,9 @@ class ProjectGenerator:
         self._output_directory: Path = output_dir
         self._variables: dict[str, str] = variables or {}
 
+    @property
+    def package_name(self) -> str:
+        return self._project_name.lower().replace("-", "_")
 
     def _copy_base_template(self) -> None:
         _copy_template_files(
@@ -92,9 +95,6 @@ class ProjectGenerator:
         )
 
     def _prepare_variables(self) -> None:
-        if not "package_name" in self._variables:
-            self._variables["package_name"] = self._project_name.lower().replace("-", "_")
-
         for component in self._components:
             for key, value in component.default_variables.items():
                 if key not in self._variables:
@@ -146,7 +146,7 @@ class ProjectGenerator:
             for component in self._components:
                 _copy_component_files(component, self._output_directory, self._variables)
 
-            (source_dir := self._output_directory / self._project_name).mkdir()
+            (source_dir := self._output_directory / self.package_name).mkdir()
             (source_dir / "__init__.py").touch(0o777)
 
             self._generate_pyproject()
