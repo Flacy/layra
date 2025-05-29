@@ -24,3 +24,10 @@ class ProjectError(LayraError):
     Project creation errors.
     """
     pass
+
+
+class ParseError(LayraError):
+    """
+    Any parsing errors.
+    """
+    pass

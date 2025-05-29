@@ -4,7 +4,7 @@ import yaml
 
 from layra.core.exceptions import TemplateError, ValidationError
 from layra.models.component import Component
-from layra.models.profile import Profile, ProfileComponent
+from layra.models.profile import Profile
 
 
 def _check_conflicts(components: list[Component]) -> None:
@@ -44,20 +44,12 @@ class TemplateManager:
             with open(path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
-            components = []
-            for component in data.get("components", []):
-                if isinstance(component, str):
-                    components.append(ProfileComponent(name=component))
-                else:
-                    components.append(ProfileComponent(**component))
-
             return Profile(
                 name=data["name"],
                 version=data["version"],
                 description=data["description"],
                 author=data.get("author"),
                 base=data.get("base", "base"),
-                components=components,
                 default_variables=data.get("default_variables", {}),
                 prompts=data.get("prompts", []),
             )
@@ -75,7 +67,7 @@ class TemplateManager:
         config_path = component_path / "component.yaml"
 
         if not config_path.exists():
-            raise TemplateError("Component '{}' not found or missing `component.yaml`".format(name))
+            raise TemplateError("Component '{}' not found or missing 'component.yaml'".format(name))
 
         try:
             with open(config_path, "r", encoding="utf-8") as f:
@@ -95,23 +87,6 @@ class TemplateManager:
             )
         except Exception as e:
             raise TemplateError("Failed to load component '{}': {}".format(name, e)) from e
-
-    def resolve_components(self, profile: Profile) -> list[Component]:
-        components, names = [], []
-
-        for component in profile.components:
-            if component.default:
-                names.append(component.name)
-
-        for name in names:
-            try:
-                components.append(self.load_component(name))
-            except TemplateError:
-                continue
-
-        _check_conflicts(components)
-
-        return components
 
     def list_profiles(self) -> list[Profile]:
         profiles = []

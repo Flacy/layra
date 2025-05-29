@@ -1,5 +1,6 @@
 import shutil
 from pathlib import Path
+from sys import version_info
 from typing import Any
 
 import tomli_w
@@ -11,7 +12,9 @@ from layra.core.variables import substitute
 from layra.models.component import Component
 from layra.models.profile import Profile
 
-DEFAULT_PYTHON_VERSION: str = "3.12"
+DEFAULT_PYTHON_VERSION: str = "{}.{}".format(version_info.major, version_info.minor)
+DEFAULT_PROJECT_DESCRIPTION: str = "A python project generated with Layra"
+DEFAULT_PROJECT_VERSION: str = "0.0.1"
 
 
 def _copy_component_files(
@@ -19,8 +22,6 @@ def _copy_component_files(
     output_dir: Path,
     variables: dict[str, str]
 ) -> None:
-    """Копирует файлы компонента"""
-
     for file_entry in component.files:
         src_path = component.path / file_entry["src"]
         dest_path = output_dir / file_entry["dest"]
@@ -65,106 +66,92 @@ def _deep_merge(target: dict[str, Any], source: dict[str, Any]) -> None:
 
 
 class ProjectGenerator:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        name: str,
+        profile: str,
+        output_dir: Path,
+        variables: dict[str, str] | None = None,
+        components: list[str] | None = None
+    ) -> None:
         self._template_manager = TemplateManager()
 
-    def _copy_base_template(self, output_dir: Path, *, variables: dict[str, str]) -> None:
-        _copy_template_files(self._template_manager.base_template_path, output_dir, variables=variables)
+        self._project_name: str = name
+        self._selected_profile: Profile = self._template_manager.load_profile(profile)
+        self._components: list[Component] = [self._template_manager.load_component(c_name) for c_name in components]
+        self._output_directory: Path = output_dir
+        self._variables: dict[str, str] = variables or {}
 
-    def _prepare_variables(
-        self,
-        project_name: str,
-        *,
-        profile: Profile,
-        components: list[Component],
-        user_variables: dict[str, str] | None = None,
-    ) -> dict[str, str]:
-        variables = {
-            "project_name": project_name,
-            "package_name": project_name.lower().replace("-", "_"),
-            "project_description": "A python project generated with Layra",
-        } | profile.default_variables
 
-        for component in components:
-            variables.update(component.default_variables)
+    def _copy_base_template(self) -> None:
+        _copy_template_files(
+            self._template_manager.base_template_path,
+            self._output_directory,
+            variables=self._variables,
+        )
 
-        if user_variables:
-            variables.update(user_variables)
+    def _prepare_variables(self) -> None:
+        if not "package_name" in self._variables:
+            self._variables["package_name"] = self._project_name.lower().replace("-", "_")
 
-        return variables
+        for component in self._components:
+            for key, value in component.default_variables.items():
+                if key not in self._variables:
+                    self._variables[key] = value
 
-    def _generate_pyproject(
-        self,
-        *,
-        output_dir: Path,
-        project_name: str,
-        profile: Profile,
-        components: list[Component],
-        variables: dict[str, str],
-    ) -> None:
+    def _generate_pyproject(self) -> None:
         config = {
             "project": {
-                "name": project_name,
-                "version": "0.0.1",
-                "description": variables.get("project_description", ""),
-                "authors": [{"name": variables.get("author_name", ""), "email": variables.get("author_email", "")}],
+                "name": self._variables.get("project_name", self._project_name),
+                "version": self._variables.get("project_version", DEFAULT_PROJECT_VERSION),
+                "description": self._variables.get("project_description", DEFAULT_PROJECT_DESCRIPTION),
+                "authors": [
+                    {"name": self._variables.get("author_name", ""), "email": self._variables.get("author_email", "")}
+                ],
                 "readme": "README.md",
-                "requires-python": ">={}".format(variables.get("python_version", DEFAULT_PYTHON_VERSION)),
+                "requires-python": ">={}".format(self._variables.get("python_version", DEFAULT_PYTHON_VERSION)),
                 "dependencies": [],
             }
         }
 
         all_dependencies = []
-        for component in components:
+        for component in self._components:
             all_dependencies.extend(component.dependencies.get("packages", []))
 
         if all_dependencies:
             config["project"]["dependencies"] = sorted(set(all_dependencies))
 
-        for component in components:
+        for component in self._components:
             _deep_merge(config, component.pyproject_additions)
 
-        config["tool"] = config.get("tool", {})
+        if not "tool" in config:
+            config["tool"] = {}
+
         config["tool"]["layra"] = {
             "version": __version__,
-            "profile": profile.name,
-            "components": [c.name for c in components],
+            "profile": self._selected_profile.name,
+            "components": [c.name for c in self._components],
         }
 
-        with open(output_dir / "pyproject.toml", "wb") as f:
+        with open(self._output_directory / "pyproject.toml", "wb") as f:
             tomli_w.dump(config, f)
 
-    def create_project(
-        self,
-        name: str,
-        *,
-        profile: str,
-        output_dir: Path,
-        variables: dict[str, str] | None = None,
-    ) -> Path:
+    def create(self) -> Path:
         try:
-            obj = self._template_manager.load_profile(profile)
-            components = self._template_manager.resolve_components(obj)
-            all_variables = self._prepare_variables(name, profile=obj, components=components, user_variables=variables)
+            self._output_directory.mkdir(parents=True, exist_ok=True)
+            self._prepare_variables()
+            self._copy_base_template()
 
-            output_dir.mkdir(parents=True, exist_ok=True)
-            self._copy_base_template(output_dir, variables=variables)
+            for component in self._components:
+                _copy_component_files(component, self._output_directory, self._variables)
 
-            for component in components:
-                _copy_component_files(component, output_dir, all_variables)
-
-            (source_dir := output_dir / name).mkdir()
+            (source_dir := self._output_directory / self._project_name).mkdir()
             (source_dir / "__init__.py").touch(0o777)
 
-            self._generate_pyproject(
-                output_dir=output_dir,
-                project_name=name,
-                profile=obj,
-                components=components,
-                variables=all_variables,
-            )
-            return output_dir
+            self._generate_pyproject()
+            return self._output_directory
         except Exception as e:
-            if output_dir.exists():
-                shutil.rmtree(output_dir, ignore_errors=True)
+            if self._output_directory.exists():
+                shutil.rmtree(self._output_directory, ignore_errors=True)
             raise ProjectError("Failed to create project: {}".format(e)) from e
