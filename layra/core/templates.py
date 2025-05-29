@@ -6,6 +6,9 @@ from layra.core.exceptions import TemplateError, ValidationError
 from layra.models.component import Component
 from layra.models.profile import Profile
 
+PROFILE_FILE: str = "profile.yaml"
+COMPONENT_FILE: str = "component.yaml"
+
 
 def _check_conflicts(components: list[Component]) -> None:
     names = {c.name for c in components}
@@ -38,7 +41,7 @@ class TemplateManager:
         :param name:
         :return:
         """
-        path = self._profiles_dir / name / "profile.yaml"
+        path = self._profiles_dir / name / PROFILE_FILE
 
         if not path.exists():
             available = [p.stem for p in self._profiles_dir.glob("*")]
@@ -68,7 +71,7 @@ class TemplateManager:
         :return:
         """
         component_path = self._components_dir / name
-        config_path = component_path / "component.yaml"
+        config_path = component_path / COMPONENT_FILE
 
         if not config_path.exists():
             raise TemplateError("Component '{}' not found or missing 'component.yaml'".format(name))
@@ -98,7 +101,7 @@ class TemplateManager:
         for file in self._profiles_dir.glob("*"):
             try:
                 profiles.append(self.load_profile(file.stem))
-            except Exception:
+            except TemplateError:
                 continue
 
         return sorted(profiles, key=lambda p: p.name)

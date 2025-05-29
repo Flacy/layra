@@ -7,15 +7,13 @@ import tomli_w
 
 from layra import __version__
 from layra.core.exceptions import ProjectError
-from layra.core.templates import TemplateManager
+from layra.core.templates import TemplateManager, PROFILE_FILE, COMPONENT_FILE
 from layra.models.component import Component
 from layra.models.profile import Profile
 
 DEFAULT_PYTHON_VERSION: str = "{}.{}".format(version_info.major, version_info.minor)
 DEFAULT_PROJECT_DESCRIPTION: str = "A python project generated with Layra"
 DEFAULT_PROJECT_VERSION: str = "0.0.1"
-PROFILE_FILE: str = "profile.yaml"
-COMPONENT_FILE: str = "component.yaml"
 
 
 def _deep_merge(target: dict[str, Any], source: dict[str, Any]) -> None:
