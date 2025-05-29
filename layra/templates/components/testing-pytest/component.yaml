@@ -15,4 +15,4 @@ pyproject_additions:
   tool.pytest.ini_options:
     testpaths: ["tests"]
     python_files: ["test_*.py"]
-    addopts: "--cov=src --cov-report=html"
+    addopts: "--cov=. --cov-report=html"
