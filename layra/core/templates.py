@@ -96,7 +96,7 @@ class TemplateManager:
     def list_profiles(self) -> list[Profile]:
         profiles = []
 
-        for file in self._profiles_dir.glob("*.yaml"):
+        for file in self._profiles_dir.glob("*"):
             try:
                 profiles.append(self.load_profile(file.stem))
             except Exception:
