@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "layra"
-description = "Layra is an intelligent CLI tool that scaffolds Python projects using modern best practices and smart presets."
+description = "Python project boilerplate generator with modern tooling and intelligent CLI for rapid scaffolding"
 authors = [
     { name = "Andrew Krylov", email = "any@lunte.dev" },
 ]
