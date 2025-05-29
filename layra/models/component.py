@@ -3,32 +3,20 @@ from pathlib import Path
 from typing import Any
 
 
-@dataclass
+@dataclass(frozen=True)
 class Component:
     name: str
     version: str
     description: str
     author: str | None = None
 
-    dependencies: dict[str, list[str]] = None
+    dependencies: list[str] = None
     conflicts: list[str] = None
 
-    files: list[dict[str, str]] = None
+    inside: bool = True
 
     pyproject_additions: dict[str, Any] = None
 
     default_variables: dict[str, str] = None
 
     path: Path | None = None
-
-    def __post_init__(self) -> None:
-        if self.dependencies is None:
-            self.dependencies = {"packages": []}
-        if self.conflicts is None:
-            self.conflicts = []
-        if self.files is None:
-            self.files = []
-        if self.pyproject_additions is None:
-            self.pyproject_additions = {}
-        if self.default_variables is None:
-            self.default_variables = {}

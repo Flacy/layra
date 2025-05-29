@@ -8,7 +8,6 @@ import tomli_w
 from layra import __version__
 from layra.core.exceptions import ProjectError
 from layra.core.templates import TemplateManager
-from layra.core.variables import substitute
 from layra.models.component import Component
 from layra.models.profile import Profile
 
@@ -16,46 +15,7 @@ DEFAULT_PYTHON_VERSION: str = "{}.{}".format(version_info.major, version_info.mi
 DEFAULT_PROJECT_DESCRIPTION: str = "A python project generated with Layra"
 DEFAULT_PROJECT_VERSION: str = "0.0.1"
 PROFILE_FILE: str = "profile.yaml"
-
-
-def _copy_component_files(
-    component: Component,
-    output_dir: Path,
-    variables: dict[str, str]
-) -> None:
-    for file_entry in component.files:
-        src_path = component.path / file_entry["src"]
-        dest_path = output_dir / file_entry["dest"]
-
-        if src_path.is_dir():
-            _copy_template_files(src_path, dest_path, variables=variables)
-        else:
-            dest_path.parent.mkdir(parents=True, exist_ok=True)
-            content = src_path.read_text(encoding="utf-8")
-            processed_content = substitute(content, variables=variables)
-            dest_path.write_text(processed_content, encoding="utf-8")
-
-
-def _copy_template_files(
-    source_dir: Path,
-    dest_dir: Path,
-    *,
-    variables: dict[str, str],
-) -> None:
-    dest_dir.mkdir(parents=True, exist_ok=True)
-
-    for item in source_dir.glob("*"):
-        if item.is_file():
-            relative_path = item.relative_to(source_dir)
-            dest_file = dest_dir / relative_path
-            dest_file.parent.mkdir(parents=True, exist_ok=True)
-
-            try:
-                content = item.read_text(encoding="utf-8")
-                processed_content = substitute(content, variables=variables)
-                dest_file.write_text(processed_content, encoding="utf-8")
-            except UnicodeDecodeError:
-                shutil.copy2(item, dest_file)
+COMPONENT_FILE: str = "component.yaml"
 
 
 def _deep_merge(target: dict[str, Any], source: dict[str, Any]) -> None:
@@ -89,22 +49,23 @@ class ProjectGenerator:
         return self._project_name.lower().replace("-", "_")
 
     def _copy_base_template(self) -> None:
-        _copy_template_files(
-            self._template_manager.path_to_base_template,
-            self._output_directory,
-            variables=self._variables,
-        )
+        self._copy_all(self._template_manager.path_to_base_template, inside=False)
 
     def _copy_profile(self) -> None:
-        profile_path = self._template_manager.profile_path(self._selected_profile)
-        profile_path.mkdir(parents=True, exist_ok=True)
+        self._copy_all(self._template_manager.profile_path(self._selected_profile), except_=PROFILE_FILE)
 
-        for item in profile_path.rglob("*"):  # type: Path
-            if item.name == PROFILE_FILE:
+    def _copy_component(self, component: Component) -> None:
+        self._copy_all(component.path, except_=COMPONENT_FILE, inside=False)
+
+    def _copy_all(self, source_dir: Path, *, except_: str | None = None, inside: bool = True) -> None:
+        source_dir.mkdir(parents=True, exist_ok=True)
+
+        for item in source_dir.rglob("*"):  # type: Path
+            if item.name == except_:
                 continue
 
-            relative_path = item.relative_to(profile_path)
-            dest_file = self._output_directory / self.package_name / relative_path
+            relative_path = item.relative_to(source_dir)
+            dest_file = self._output_directory / (self.package_name if inside else "") / relative_path
 
             if item.is_dir():
                 dest_file.mkdir(parents=True, exist_ok=True)
@@ -136,13 +97,12 @@ class ProjectGenerator:
                 ],
                 "readme": "README.md",
                 "requires-python": ">={}".format(self._variables.get("python_version", DEFAULT_PYTHON_VERSION)),
-                "dependencies": self._selected_profile.dependencies,
             }
         }
 
-        all_dependencies = []
+        all_dependencies = self._selected_profile.dependencies.copy()
         for component in self._components:
-            all_dependencies.extend(component.dependencies.get("packages", []))
+            all_dependencies.extend(component.dependencies)
 
         if all_dependencies:
             config["project"]["dependencies"] = sorted(set(all_dependencies))
@@ -171,7 +131,7 @@ class ProjectGenerator:
             self._generate_pyproject()
 
             for component in self._components:
-                _copy_component_files(component, self._output_directory, self._variables)
+                self._copy_component(component)
 
             (source_dir := self._output_directory / self.package_name).mkdir(exist_ok=True)
             (source_dir / "__init__.py").touch(0o777)

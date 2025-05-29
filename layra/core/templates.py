@@ -85,7 +85,7 @@ class TemplateManager:
                 author=data.get("author"),
                 dependencies=data.get("dependencies", {"packages": []}),
                 conflicts=data.get("conflicts", []),
-                files=data.get("files", []),
+                inside=data.get("inside", True),
                 pyproject_additions=data.get("pyproject_additions", {}),
                 default_variables=data.get("default_variables", {}),
                 path=component_path,
