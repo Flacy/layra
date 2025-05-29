@@ -5,9 +5,9 @@ class LayraError(Exception):
     pass
 
 
-class TemplateError(LayraError):
+class TemplateLoadError(LayraError):
     """
-    Templates working errors.
+    Templates load errors.
     """
     pass
 

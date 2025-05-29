@@ -7,7 +7,7 @@ import tomli_w
 
 from layra import __version__
 from layra.core.exceptions import ProjectError
-from layra.core.templates import TemplateManager, PROFILE_FILE, COMPONENT_FILE
+from layra.core.templates import TemplateManager, MANIFEST_FILE
 from layra.models.component import Component
 from layra.models.profile import Profile
 
@@ -50,10 +50,10 @@ class ProjectGenerator:
         self._copy_all(self._template_manager.path_to_base_template, inside=False)
 
     def _copy_profile(self) -> None:
-        self._copy_all(self._template_manager.profile_path(self._selected_profile), except_=PROFILE_FILE)
+        self._copy_all(self._template_manager.profile_path(self._selected_profile), except_=MANIFEST_FILE)
 
     def _copy_component(self, component: Component) -> None:
-        self._copy_all(component.path, except_=COMPONENT_FILE, inside=False)
+        self._copy_all(component.path, except_=MANIFEST_FILE, inside=False)
 
     def _copy_all(self, source_dir: Path, *, except_: str | None = None, inside: bool = True) -> None:
         source_dir.mkdir(parents=True, exist_ok=True)

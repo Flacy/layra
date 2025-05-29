@@ -2,12 +2,11 @@ from pathlib import Path
 
 import yaml
 
-from layra.core.exceptions import TemplateError, ValidationError
+from layra.core.exceptions import TemplateLoadError, ValidationError
 from layra.models.component import Component
 from layra.models.profile import Profile
 
-PROFILE_FILE: str = "profile.yaml"
-COMPONENT_FILE: str = "component.yaml"
+MANIFEST_FILE: str = "layra.yaml"
 
 
 def _check_conflicts(components: list[Component]) -> None:
@@ -41,14 +40,14 @@ class TemplateManager:
         :param name:
         :return:
         """
-        path = self._profiles_dir / name / PROFILE_FILE
+        manifest_path = self._profiles_dir / name / MANIFEST_FILE
 
-        if not path.exists():
+        if not manifest_path.exists():
             available = [p.stem for p in self._profiles_dir.glob("*")]
-            raise TemplateError("Profile '{}' not found. Available: {}".format(name, ", ".join(available)))
+            raise TemplateLoadError("Profile '{}' not found. Available: {}".format(name, ", ".join(available)))
 
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(manifest_path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
             return Profile(
@@ -61,7 +60,7 @@ class TemplateManager:
                 prompts=data.get("prompts", []),
             )
         except Exception as e:
-            raise TemplateError("Failed to load profile '{}': {}".format(name, e)) from e
+            raise TemplateLoadError("Failed to load profile '{}': {}".format(name, e)) from e
 
     def load_component(self, name: str) -> Component:
         """
@@ -71,13 +70,13 @@ class TemplateManager:
         :return:
         """
         component_path = self._components_dir / name
-        config_path = component_path / COMPONENT_FILE
+        manifest_path = component_path / MANIFEST_FILE
 
-        if not config_path.exists():
-            raise TemplateError("Component '{}' not found or missing 'component.yaml'".format(name))
+        if not manifest_path.exists():
+            raise TemplateLoadError("Component '{}' not found or missing 'component.yaml'".format(name))
 
         try:
-            with open(config_path, "r", encoding="utf-8") as f:
+            with open(manifest_path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
             return Component(
@@ -93,7 +92,7 @@ class TemplateManager:
                 path=component_path,
             )
         except Exception as e:
-            raise TemplateError("Failed to load component '{}': {}".format(name, e)) from e
+            raise TemplateLoadError("Failed to load component '{}': {}".format(name, e)) from e
 
     def list_profiles(self) -> list[Profile]:
         profiles = []
@@ -101,7 +100,7 @@ class TemplateManager:
         for file in self._profiles_dir.glob("*"):
             try:
                 profiles.append(self.load_profile(file.stem))
-            except TemplateError:
+            except TemplateLoadError:
                 continue
 
         return sorted(profiles, key=lambda p: p.name)
