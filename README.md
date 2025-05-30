@@ -33,14 +33,11 @@ pip install layra
 ### Create your first project
 
 ```bash
-# Create a new CLI tool project
-layra new my-awesome-cli --profile cli-tool
+# Configure Layra
+layra setup
 
 # Create a web API project
 layra new my-api --profile web-fastapi
-
-# Create a Python library
-layra new my-library --profile library
 ```
 
 ## 🗺️ Roadmap

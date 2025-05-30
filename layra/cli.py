@@ -9,6 +9,7 @@ from typer import Typer, Argument, Option
 from layra import __version__
 from layra.core.exceptions import ParseError
 from layra.core.generator import ProjectGenerator
+from layra.core.repository import Repository, TRUSTED_SOURCES
 from layra.core.templates import TemplateManager
 
 app = Typer(
@@ -70,6 +71,17 @@ def new(
         project_path = generator.create()
 
     console.print("Project created successfully at [bold green]{}[/bold green]".format(project_path))
+
+
+@app.command()
+def setup(
+    skip_templates: bool = Option(False, "--skip-templates", help="Skip templates installation")
+) -> None:
+    if not skip_templates:
+        repository = Repository()
+        for source in TRUSTED_SOURCES:
+            console.print("Installing templates from '{}'".format(source.repository))
+            repository.install(source.https, branch=source.branch, type_=source.type)
 
 
 @app.command()

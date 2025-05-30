@@ -8,6 +8,7 @@ import tomli_w
 from layra import __version__
 from layra.core.exceptions import ProjectError
 from layra.core.templates import TemplateManager, MANIFEST_FILE
+from layra.core.variables import substitute
 from layra.models.component import Component
 from layra.models.profile import Profile
 
@@ -70,11 +71,23 @@ class ProjectGenerator:
             elif item.is_file():
                 dest_file.parent.mkdir(parents=True, exist_ok=True)
                 try:
-                    dest_file.write_text(item.read_text(encoding="utf-8"), encoding="utf-8")
+                    data = item.read_text(encoding="utf-8")
+                    dest_file.write_text(substitute(data, variables=self._variables), encoding="utf-8")
                 except UnicodeDecodeError:
                     shutil.copy2(item, dest_file)
 
     def _prepare_variables(self) -> None:
+        if "package_name" not in self._variables:
+            self._variables["package_name"] = self.package_name
+        if "project_name" not in self._variables:
+            self._variables["project_name"] = self._project_name
+        if "project_version" not in self._variables:
+            self._variables["project_version"] = DEFAULT_PROJECT_VERSION
+        if "project_description" not in self._variables:
+            self._variables["project_description"] = DEFAULT_PROJECT_DESCRIPTION
+        if "python_version" not in self._variables:
+            self._variables["python_version"] = DEFAULT_PYTHON_VERSION
+
         for key, value in self._selected_profile.default_variables.items():
             if key not in self._variables:
                 self._variables[key] = value
@@ -87,14 +100,14 @@ class ProjectGenerator:
     def _generate_pyproject(self) -> None:
         config = {
             "project": {
-                "name": self._variables.get("project_name", self._project_name),
-                "version": self._variables.get("project_version", DEFAULT_PROJECT_VERSION),
-                "description": self._variables.get("project_description", DEFAULT_PROJECT_DESCRIPTION),
+                "name": self._variables["project_name"],
+                "version": self._variables["project_version"],
+                "description": self._variables["project_description"],
                 "authors": [
                     {"name": self._variables.get("author_name", ""), "email": self._variables.get("author_email", "")}
                 ],
                 "readme": "README.md",
-                "requires-python": ">={}".format(self._variables.get("python_version", DEFAULT_PYTHON_VERSION)),
+                "requires-python": ">={}".format(self._variables["python_version"]),
             }
         }
 

@@ -31,3 +31,11 @@ class ParseError(LayraError):
     Any parsing errors.
     """
     pass
+
+
+class GitError(LayraError):
+    pass
+
+
+class CloneError(GitError):
+    pass

@@ -2,11 +2,11 @@ from pathlib import Path
 
 import yaml
 
+from layra.core.config import MANIFEST_FILE
 from layra.core.exceptions import TemplateLoadError, ValidationError
+from layra.core.storage import Storage
 from layra.models.component import Component
 from layra.models.profile import Profile
-
-MANIFEST_FILE: str = "layra.yaml"
 
 
 def _check_conflicts(components: list[Component]) -> None:
@@ -20,10 +20,10 @@ def _check_conflicts(components: list[Component]) -> None:
 
 class TemplateManager:
     def __init__(self) -> None:
-        self._templates_dir: Path = Path(__file__).parent.parent / "templates"
-        self._profiles_dir = self._templates_dir / "profiles"
-        self._components_dir = self._templates_dir / "components"
-        self._base_dir = self._templates_dir / "base"
+        self._storage: Storage = Storage()
+        self._profiles_dir = self._storage.templates_dir / "profiles"
+        self._components_dir = self._storage.templates_dir / "components"
+        self._base_dir = self._storage.templates_dir / "base"
 
     @property
     def path_to_base_template(self) -> Path:
